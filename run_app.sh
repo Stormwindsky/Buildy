@@ -19,6 +19,7 @@ echo "        BUILDY SUITE - READY"
 echo "------------------------------------------------"
 echo " 1) OC Player Maker (main.py)"
 echo " 2) BuildyPopupMaker (main_buildy.py)"
+echo " 3) Launcher (launcher.py)"
 echo "------------------------------------------------"
 read -p "Choix : " CHOICE
 
@@ -28,6 +29,9 @@ case $CHOICE in
         ;;
     2)
         python3 main_buildy.py
+        ;;
+    3)
+        python3 launcher.py
         ;;
     *)
         echo "Erreur choix."

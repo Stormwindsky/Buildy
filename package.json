@@ -1,0 +1,14 @@
+{
+  "name": "buildy",
+  "version": "1.0.0",
+  "description": "3D Model Viewer with Electron",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "Stormwindsky",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^30.5.1"
+  }
+}
