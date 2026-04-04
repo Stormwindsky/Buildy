@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zxx">
+<head>
+    <meta charset="UTF-8">
+    <title>OC Player Maker</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        :root {
+            --bg: #1a1a2e;
+            --panel: #16213e;
+            --accent: #e94560;
+            --border: 4px solid #000;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: white;
+            font-family: 'Press Start 2P', cursive;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .main-ui {
+            display: flex;
+            gap: 20px;
+            background: var(--panel);
+            padding: 25px;
+            border: var(--border);
+            box-shadow: 8px 8px 0px #000;
+        }
+
+        .tools {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 80px;
+        }
+
+        #pixel-grid {
+            display: grid;
+            grid-template-columns: repeat(16, 25px);
+            grid-template-rows: repeat(16, 25px);
+            gap: 1px;
+            background-color: #ffffff; /* Blanc par défaut comme demandé */
+            border: var(--border);
+            image-rendering: pixelated;
+        }
+
+        .pixel {
+            width: 25px;
+            height: 25px;
+            /* On garde une légère bordure interne pour voir les cases */
+            outline: 1px solid rgba(0,0,0,0.05); 
+        }
+
+        .icon-btn {
+            font-size: 24px;
+            padding: 10px;
+            border: var(--border);
+            background: #eee;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .icon-btn:hover { background: var(--accent); }
+        
+        select {
+            font-size: 20px;
+            padding: 5px;
+            border: var(--border);
+            background: white;
+        }
+
+        /* Styles pour les sélecteurs de couleur */
+        .color-label {
+            font-size: 18px;
+            text-align: center;
+            margin-bottom: -10px;
+        }
+
+        input[type="color"] {
+            width: 60px;
+            height: 50px;
+            border: var(--border);
+            background: none;
+            cursor: pointer;
+        }
+
+        .save-btn { background: #4ecca3; }
+        .clear-btn { background: #ff4b2b; }
+
+    </style>
+</head>
+<body>
+
+    <h1 style="color: var(--accent); text-shadow: 4px 4px #000;">🕹️ OC PLAYER MAKER</h1>
+
+    <div class="main-ui">
+        <div class="tools">
+            <div class="color-label">🖌️</div>
+            <input type="color" id="cp" value="#e94560">
+            
+            <div class="color-label">🖼️</div>
+            <input type="color" id="bg-cp" value="#ffffff" oninput="changeGridBg(this.value)">
+
+            <select id="fn">
+                <option value="idle.png">🧘</option>
+                <option value="walk.png">🚶</option>
+                <option value="run.png">🏃</option>
+                <option value="jump.png">🦘</option>
+                <option value="fall.png">🕳️</option>
+            </select>
+
+            <button class="icon-btn clear-btn" onclick="cls()">🗑️</button>
+            <button class="icon-btn save-btn" onclick="save()">💾</button>
+        </div>
+
+        <div id="pixel-grid"></div>
+    </div>
+
+    <script>
+        const grid = document.getElementById('pixel-grid');
+        const cp = document.getElementById('cp');
+        const fn = document.getElementById('fn');
+
+        // Initialisation de la grille
+        for (let i = 0; i < 256; i++) {
+            const d = document.createElement('div');
+            d.classList.add('pixel');
+            d.style.backgroundColor = "rgba(0,0,0,0)";
+            d.addEventListener('mousedown', (e) => p(e));
+            d.addEventListener('mouseover', (e) => { if (e.buttons === 1) p(e); });
+            grid.appendChild(d);
+        }
+
+        // Fonction pour peindre
+        function p(e) { e.target.style.backgroundColor = cp.value; }
+
+        // Fonction pour changer la couleur du fond (Canvas)
+        function changeGridBg(color) {
+            grid.style.backgroundColor = color;
+        }
+
+        // Effacer les pixels
+        function cls() { 
+            document.querySelectorAll('.pixel').forEach(x => x.style.backgroundColor = "rgba(0,0,0,0)"); 
+        }
+
+        // Sauvegarde
+        function save() {
+            const data = Array.from(document.querySelectorAll('.pixel')).map(x => x.style.backgroundColor);
+            if (window.pywebview) {
+                window.pywebview.api.save_sprite(data, fn.value).then(r => {
+                    const btn = document.querySelector('.save-btn');
+                    btn.innerText = "✅";
+                    setTimeout(() => { btn.innerText = "💾"; }, 1000);
+                });
+            }
+        }
+    </script>
+</body>
+</html>
