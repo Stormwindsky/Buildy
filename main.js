@@ -13,7 +13,7 @@ function createWindow() {
     });
 
     // Utilise path.join pour être compatible peu importe l'emplacement du dossier
-    win.loadFile(path.join(__dirname, 'HTML', 'test.html'));
+    win.loadFile(path.join(__dirname, 'HTML', 'Editor.html'));
     
     // Optionnel : win.setMenu(null); // Pour cacher la barre de menu
 }

@@ -12,7 +12,6 @@ class SpriteAPI:
         try:
             img = Image.new('RGBA', (16, 16), (0, 0, 0, 0))
             pixels = img.load()
-
             for i, color in enumerate(data):
                 x, y = i % 16, i // 16
                 if 'rgba(0, 0, 0, 0)' in color:
@@ -24,7 +23,6 @@ class SpriteAPI:
                     else:
                         rgba = (255, 255, 255, 255)
                 pixels[x, y] = rgba
-
             path = os.path.join('Skin', filename)
             img.save(path)
             return "✅ OK"
@@ -32,5 +30,6 @@ class SpriteAPI:
             return "❌ ERR"
 
 api = SpriteAPI()
-window = webview.create_window('OC Player Maker', 'index.html', js_api=api, width=750, height=650)
+# Chemin mis à jour vers HTML/OCPM.html
+window = webview.create_window('OC Player Maker', 'HTML/OCPM.html', js_api=api, width=750, height=650)
 webview.start()

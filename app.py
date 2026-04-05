@@ -1,5 +1,5 @@
 import sys
-from PyQt6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QApplication, QMainWindow
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtCore import QUrl
 import os
@@ -12,8 +12,8 @@ class CustomNotepad(QMainWindow):
 
         self.browser = QWebEngineView()
         
-        # Chargement du fichier HTML local
-        path = os.path.abspath("notepad.html")
+        # Chemin mis à jour vers le dossier HTML
+        path = os.path.abspath(os.path.join("HTML", "Editor.html"))
         self.browser.setUrl(QUrl.fromLocalFile(path))
 
         self.setCentralWidget(self.browser)
