@@ -34,7 +34,7 @@ The following third-party libraries, fonts, and tools are used in this project a
 
 ---
 
-## JavaScript / Node.js
+## JavaScript & Web Libraries
 
 ### Electron
 - **Repository:** https://github.com/electron/electron
@@ -47,7 +47,21 @@ The following third-party libraries, fonts, and tools are used in this project a
 - **License:** MIT License
 - **Version:** 0.160.0
 - **CDN:** https://unpkg.com/three@0.160.0/
-- **Usage:** Used in `test.html` to render an interactive 3D model viewer with scene management, lighting, and camera controls. Includes the `OrbitControls` addon for mouse-based navigation.
+- **Usage:** Core engine for 3D rendering in `Editor.html` and `Game.html`. Also used in `test.html` to render an interactive 3D model viewer with scene management, lighting, and camera controls.
+
+### OrbitControls (Three.js add-on)
+- **Source:** Distributed with Three.js
+- **License:** MIT License
+- **Usage:** Used for camera manipulation in the 3D viewports and mouse-based navigation in `test.html`.
+
+---
+
+## Tools & Environments
+
+### Node.js / NPM
+- **Website:** https://nodejs.org/
+- **License:** Multiple (MIT, BSD, etc.)
+- **Usage:** Runtime environment for Electron and dependency management.
 
 ---
 
