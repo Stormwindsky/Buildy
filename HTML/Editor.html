@@ -2,141 +2,655 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>3D Model Viewer - Editor</title>
+    <title>3D Model Viewer — Studio Edition</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #0a0a1a; font-family: 'Segoe UI', sans-serif; }
-        #ui {
-            position: absolute; top: 15px; left: 15px;
-            background: rgba(0, 0, 0, 0.85); padding: 20px;
-            border-radius: 8px; color: white; z-index: 10;
-            border: 1px solid #00d4ff; width: 300px;
-            box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Rajdhani:wght@400;500;600;700&display=swap');
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #07080f;
+            --panel: rgba(8, 10, 20, 0.92);
+            --border: rgba(0, 200, 255, 0.25);
+            --accent: #00c8ff;
+            --accent2: #ff6b35;
+            --text: #d0dce8;
+            --dim: #5a6a7a;
+            --success: #00e87a;
+            --mono: 'JetBrains Mono', monospace;
+            --sans: 'Rajdhani', sans-serif;
         }
-        h2 { margin: 0 0 10px 0; color: #00d4ff; font-size: 18px; letter-spacing: 1px; }
-        .controls-hint { font-size: 12px; line-height: 1.6; color: #ccc; margin-top: 15px; border-top: 1px solid #333; padding-top: 10px; }
-        b { color: #00d4ff; }
-        input[type="file"] { 
-            margin-top: 10px; width: 100%; color: #00d4ff; font-size: 12px; cursor: pointer;
-            background: #111; padding: 8px; border: 1px dashed #00d4ff; border-radius: 4px;
+
+        body {
+            background: var(--bg);
+            font-family: var(--mono);
+            overflow: hidden;
+            color: var(--text);
+            cursor: crosshair;
         }
+
+        canvas { display: block; }
+
+        /* ── TOP BAR ── */
+        #topbar {
+            position: absolute; top: 0; left: 0; right: 0; height: 38px;
+            background: rgba(6, 8, 16, 0.97);
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; padding: 0 16px; gap: 20px;
+            z-index: 100;
+        }
+        .logo {
+            font-family: var(--sans); font-size: 15px; font-weight: 700;
+            color: var(--accent); letter-spacing: 3px; text-transform: uppercase;
+        }
+        .logo span { color: #fff; }
+        .topbar-sep { width: 1px; height: 20px; background: var(--border); }
+
+        /* ── XYZ COORDS ── */
+        #coords {
+            display: flex; gap: 6px; align-items: center; cursor: pointer;
+            padding: 4px 10px; border: 1px solid var(--border);
+            border-radius: 4px; transition: border-color .2s, background .2s;
+        }
+        #coords:hover { border-color: var(--accent); background: rgba(0,200,255,0.05); }
+        #coords:hover::after {
+            content: ' ↗ click to teleport';
+            font-size: 9px; color: var(--accent); margin-left: 4px;
+        }
+        .coord-val {
+            font-family: var(--mono); font-size: 11px; font-weight: 500;
+        }
+        .coord-x { color: #ff5555; }
+        .coord-y { color: #55ff55; }
+        .coord-z { color: #5599ff; }
+        .coord-label { color: var(--dim); font-size: 10px; }
+
+        /* ── SPEED ── */
+        #speed-display {
+            font-size: 11px; color: var(--dim);
+        }
+        #speed-display b { color: var(--accent2); }
+
+        /* ── LEFT PANEL ── */
+        #panel {
+            position: absolute; top: 50px; left: 14px;
+            width: 280px;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            z-index: 10;
+            box-shadow: 0 4px 40px rgba(0,0,0,.6), 0 0 0 1px rgba(0,200,255,0.04);
+        }
+        .panel-header {
+            background: rgba(0,200,255,0.07);
+            border-bottom: 1px solid var(--border);
+            padding: 10px 14px;
+            font-family: var(--sans); font-size: 13px; font-weight: 600;
+            color: var(--accent); letter-spacing: 2px; text-transform: uppercase;
+        }
+        .panel-body { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+
+        /* File input */
+        .file-zone {
+            border: 1px dashed var(--border);
+            border-radius: 6px; padding: 14px 10px;
+            text-align: center; cursor: pointer;
+            transition: border-color .2s, background .2s;
+            position: relative; overflow: hidden;
+        }
+        .file-zone:hover { border-color: var(--accent); background: rgba(0,200,255,0.04); }
+        .file-zone input {
+            position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%;
+        }
+        .file-zone-label { font-size: 11px; color: var(--dim); }
+        .file-zone-label b { color: var(--accent); font-size: 13px; display: block; margin-bottom: 4px; }
+
+        #file-status {
+            font-size: 10px; color: var(--success);
+            padding: 4px 8px; background: rgba(0,232,122,0.07);
+            border-radius: 4px; border: 1px solid rgba(0,232,122,0.2);
+            display: none;
+        }
+
+        /* Controls list */
+        .controls-grid { display: grid; grid-template-columns: auto 1fr; gap: 5px 10px; }
+        .key {
+            font-family: var(--mono); font-size: 10px;
+            background: rgba(0,200,255,0.12); color: var(--accent);
+            border: 1px solid var(--border); border-radius: 3px;
+            padding: 1px 6px; text-align: center; white-space: nowrap;
+        }
+        .key-desc { font-size: 10px; color: var(--dim); align-self: center; }
+
+        .section-title {
+            font-family: var(--sans); font-size: 11px; font-weight: 600;
+            color: var(--dim); letter-spacing: 2px; text-transform: uppercase;
+            border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px;
+        }
+
+        /* ── TELEPORT MODAL ── */
+        #modal-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);
+            z-index: 1000; align-items: center; justify-content: center;
+        }
+        #modal-overlay.active { display: flex; }
+        #modal {
+            background: #0b0d1a; border: 1px solid var(--accent);
+            border-radius: 10px; padding: 28px 32px; width: 360px;
+            box-shadow: 0 0 60px rgba(0,200,255,0.15);
+            animation: modalIn .18s ease;
+        }
+        @keyframes modalIn {
+            from { transform: scale(.92) translateY(10px); opacity: 0; }
+            to   { transform: scale(1) translateY(0);      opacity: 1; }
+        }
+        #modal h3 {
+            font-family: var(--sans); font-size: 16px; font-weight: 700;
+            color: var(--accent); letter-spacing: 2px; margin-bottom: 20px;
+        }
+        .modal-row { display: flex; gap: 10px; margin-bottom: 14px; }
+        .modal-field { flex: 1; }
+        .modal-field label {
+            display: block; font-size: 10px; margin-bottom: 5px; font-weight: 500;
+        }
+        .modal-field label.lx { color: #ff5555; }
+        .modal-field label.ly { color: #55ff55; }
+        .modal-field label.lz { color: #5599ff; }
+        .modal-field input {
+            width: 100%; background: #0e1120; border: 1px solid var(--border);
+            border-radius: 5px; color: #fff; font-family: var(--mono);
+            font-size: 13px; padding: 8px 10px;
+            transition: border-color .2s;
+            outline: none;
+        }
+        .modal-field input:focus { border-color: var(--accent); }
+        .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
+        .btn {
+            flex: 1; padding: 10px; border-radius: 5px; font-family: var(--sans);
+            font-size: 14px; font-weight: 600; letter-spacing: 1px;
+            cursor: pointer; border: none; transition: opacity .2s, transform .1s;
+        }
+        .btn:active { transform: scale(.97); }
+        .btn-primary { background: var(--accent); color: #000; }
+        .btn-secondary { background: rgba(255,255,255,0.07); color: var(--text); }
+        .btn:hover { opacity: .85; }
+
+        /* ── CROSSHAIR ── */
+        #crosshair {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+            width: 16px; height: 16px; pointer-events: none; z-index: 5;
+            opacity: 0; transition: opacity .3s;
+        }
+        body.flycam #crosshair { opacity: 0.55; }
+        #crosshair::before, #crosshair::after {
+            content: ''; position: absolute; background: rgba(0,200,255,.7);
+        }
+        #crosshair::before { width: 1px; height: 100%; left: 50%; top: 0; }
+        #crosshair::after  { width: 100%; height: 1px; top: 50%; left: 0; }
+
+        /* ── FLY MODE INDICATOR ── */
+        #fly-badge {
+            position: absolute; top: 50px; right: 14px;
+            background: rgba(255,107,53,0.15); border: 1px solid var(--accent2);
+            color: var(--accent2); font-family: var(--sans); font-size: 11px;
+            font-weight: 600; letter-spacing: 2px; padding: 5px 12px;
+            border-radius: 4px; display: none;
+        }
+        #fly-badge.active { display: block; }
+
+        /* ── GRID TOGGLE ── */
+        .toggle-row { display: flex; align-items: center; justify-content: space-between; }
+        .toggle { width: 34px; height: 18px; background: #1a1f30; border-radius: 9px;
+                  border: 1px solid var(--border); cursor: pointer; position: relative;
+                  transition: background .2s; }
+        .toggle.on { background: var(--accent); }
+        .toggle::after {
+            content: ''; position: absolute; top: 2px; left: 2px;
+            width: 12px; height: 12px; background: #fff; border-radius: 50%;
+            transition: left .2s;
+        }
+        .toggle.on::after { left: 18px; }
+        .toggle-label { font-size: 11px; color: var(--dim); }
     </style>
 </head>
 <body>
-    <div id="ui">
-        <h2>MODEL VIEWER</h2>
-        <div id="fileSection">
-            <label style="font-size: 13px;">Importer un fichier (.rbxmx, .tdw) :</label>
-            <input type="file" id="fileInput" accept=".rbxmx,.tdw">
+
+<!-- TOP BAR -->
+<div id="topbar">
+    <div class="logo">MODEL<span>VIEWER</span></div>
+    <div class="topbar-sep"></div>
+    <div id="coords" title="Click to teleport camera">
+        <span class="coord-label">X</span><span class="coord-val coord-x" id="cx">0.00</span>
+        <span class="coord-label" style="margin-left:6px">Y</span><span class="coord-val coord-y" id="cy">0.00</span>
+        <span class="coord-label" style="margin-left:6px">Z</span><span class="coord-val coord-z" id="cz">0.00</span>
+    </div>
+    <div class="topbar-sep"></div>
+    <div id="speed-display">SPD <b id="spd-val">10</b></div>
+</div>
+
+<!-- FLY BADGE -->
+<div id="fly-badge">✈ FLY MODE — RMB</div>
+
+<!-- CROSSHAIR -->
+<div id="crosshair"></div>
+
+<!-- LEFT PANEL -->
+<div id="panel">
+    <div class="panel-header">⬡ Studio Controls</div>
+    <div class="panel-body">
+
+        <div>
+            <div class="section-title" style="margin-bottom:8px">Import Model</div>
+            <div class="file-zone" id="dropZone">
+                <input type="file" id="fileInput" accept=".rbxmx,.tdw">
+                <div class="file-zone-label">
+                    <b>DROP FILE</b>
+                    .rbxmx &nbsp;·&nbsp; .tdw
+                </div>
+            </div>
+            <div id="file-status"></div>
         </div>
-        <div class="controls-hint">
-            <b>Clic Gauche</b> : Pivoter l'objet<br>
-            <b>Clic Droit / Flèches</b> : Panoramique<br>
-            <b>Molette</b> : Zoom avant/arrière
+
+        <div>
+            <div class="section-title" style="margin-bottom:8px">Navigation</div>
+            <div class="controls-grid">
+                <span class="key">RMB Hold</span><span class="key-desc">Enter fly mode</span>
+                <span class="key">W / S</span><span class="key-desc">Move forward / back</span>
+                <span class="key">A / D</span><span class="key-desc">Strafe left / right</span>
+                <span class="key">E / Q</span><span class="key-desc">Move up / down</span>
+                <span class="key">Scroll ↑↓</span><span class="key-desc">Speed up / slow down</span>
+                <span class="key">LMB Drag</span><span class="key-desc">Orbit (free mode)</span>
+                <span class="key">F</span><span class="key-desc">Focus on model</span>
+                <span class="key">Shift</span><span class="key-desc">Sprint (×3 speed)</span>
+            </div>
+        </div>
+
+        <div>
+            <div class="section-title" style="margin-bottom:8px">Display</div>
+            <div class="toggle-row">
+                <span class="toggle-label">Grid</span>
+                <div class="toggle on" id="gridToggle"></div>
+            </div>
+            <div class="toggle-row" style="margin-top:8px">
+                <span class="toggle-label">Wireframe</span>
+                <div class="toggle" id="wireToggle"></div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- TELEPORT MODAL -->
+<div id="modal-overlay">
+    <div id="modal">
+        <h3>↗ TELEPORT CAMERA</h3>
+        <div class="modal-row">
+            <div class="modal-field">
+                <label class="lx">X</label>
+                <input type="number" id="tp-x" placeholder="0" step="0.1">
+            </div>
+            <div class="modal-field">
+                <label class="ly">Y</label>
+                <input type="number" id="tp-y" placeholder="0" step="0.1">
+            </div>
+            <div class="modal-field">
+                <label class="lz">Z</label>
+                <input type="number" id="tp-z" placeholder="0" step="0.1">
+            </div>
+        </div>
+        <div class="modal-btns">
+            <button class="btn btn-secondary" id="modal-cancel">Cancel</button>
+            <button class="btn btn-primary" id="modal-go">Teleport →</button>
         </div>
     </div>
+</div>
 
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-            }
-        }
-    </script>
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+}
+</script>
 
-    <script type="module">
-        import * as THREE from 'three';
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x05050f);
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 5000);
-        camera.position.set(50, 50, 50);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+// ─────────────────────────────────────────────
+// SCENE SETUP
+// ─────────────────────────────────────────────
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x07080f);
+scene.fog = new THREE.FogExp2(0x07080f, 0.0008);
 
-        scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-        const sun = new THREE.DirectionalLight(0xffffff, 1.2);
-        sun.position.set(100, 200, 100);
-        scene.add(sun);
-        scene.add(new THREE.GridHelper(1000, 100, 0x00d4ff, 0x222222));
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100000);
+camera.position.set(80, 60, 80);
 
-        const modelGroup = new THREE.Group();
-        scene.add(modelGroup);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+document.body.appendChild(renderer.domElement);
 
-        const controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
+// Lights
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+const sun = new THREE.DirectionalLight(0xffeedd, 1.4);
+sun.position.set(200, 400, 200);
+sun.castShadow = true;
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0x8899ff, 0.3);
+fill.position.set(-100, 50, -100);
+scene.add(fill);
 
-        document.getElementById('fileInput').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                modelGroup.clear();
-                if (file.name.endsWith('.rbxmx')) parseRoblox(ev.target.result);
-                else if (file.name.endsWith('.tdw')) parseTDW(ev.target.result);
-                focusModel();
-            };
-            reader.readAsText(file);
+// Grid (infinite feel with 2 grids)
+const grid = new THREE.GridHelper(20000, 400, 0x00c8ff, 0x111622);
+grid.material.transparent = true;
+grid.material.opacity = 0.45;
+scene.add(grid);
+
+const modelGroup = new THREE.Group();
+scene.add(modelGroup);
+
+// ─────────────────────────────────────────────
+// ORBIT CONTROLS (LMB drag mode)
+// ─────────────────────────────────────────────
+const orbit = new OrbitControls(camera, renderer.domElement);
+orbit.enableDamping = true;
+orbit.dampingFactor = 0.08;
+orbit.enablePan = true;
+orbit.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
+orbit.minDistance = 0.5;
+orbit.maxDistance = 50000;
+
+// ─────────────────────────────────────────────
+// FLY CAM STATE (Roblox Studio RMB mode)
+// ─────────────────────────────────────────────
+let flyMode = false;
+let flySpeed = 10;
+const keys = {};
+const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+const flyDir = new THREE.Vector3();
+let lastMouseX = 0, lastMouseY = 0;
+let mouseDX = 0, mouseDY = 0;
+
+const spd = document.getElementById('spd-val');
+const flyBadge = document.getElementById('fly-badge');
+
+function enterFly() {
+    if (flyMode) return;
+    flyMode = true;
+    orbit.enabled = false;
+    document.body.classList.add('flycam');
+    flyBadge.classList.add('active');
+    // Sync euler to current camera orientation
+    euler.setFromQuaternion(camera.quaternion, 'YXZ');
+}
+function exitFly() {
+    if (!flyMode) return;
+    flyMode = false;
+    orbit.enabled = true;
+    orbit.target.copy(camera.position).addScaledVector(
+        camera.getWorldDirection(new THREE.Vector3()), flySpeed * 2
+    );
+    document.body.classList.remove('flycam');
+    flyBadge.classList.remove('active');
+}
+
+renderer.domElement.addEventListener('mousedown', e => {
+    if (e.button === 2) { enterFly(); lastMouseX = e.clientX; lastMouseY = e.clientY; }
+});
+renderer.domElement.addEventListener('mouseup', e => { if (e.button === 2) exitFly(); });
+renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
+
+renderer.domElement.addEventListener('mousemove', e => {
+    if (!flyMode) return;
+    mouseDX += e.clientX - lastMouseX;
+    mouseDY += e.clientY - lastMouseY;
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+});
+
+window.addEventListener('keydown', e => { keys[e.code] = true; });
+window.addEventListener('keyup',   e => { keys[e.code] = false; });
+
+// Scroll = always change speed (never zoom)
+renderer.domElement.addEventListener('wheel', e => {
+    e.preventDefault();
+    flySpeed = Math.max(0.5, Math.min(5000, flySpeed * (e.deltaY > 0 ? 0.85 : 1.18)));
+    spd.textContent = flySpeed < 10 ? flySpeed.toFixed(1) : Math.round(flySpeed);
+}, { passive: false });
+// Disable orbit zoom so scroll is fully ours
+orbit.enableZoom = false;
+
+function updateFly(dt) {
+    // Mouse look — only when RMB held
+    if (flyMode) {
+        const sens = 0.0018;
+        euler.y -= mouseDX * sens;
+        euler.x -= mouseDY * sens;
+        euler.x = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, euler.x));
+        camera.quaternion.setFromEuler(euler);
+    }
+    mouseDX = 0; mouseDY = 0;
+
+    // WASD movement — always active, no RMB required
+    const sprint = keys['ShiftLeft'] || keys['ShiftRight'] ? 3 : 1;
+    const speed  = flySpeed * sprint * dt;
+    flyDir.set(0, 0, 0);
+
+    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+    const right   = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+    const up      = new THREE.Vector3(0, 1, 0);
+
+    if (keys['KeyW']) flyDir.addScaledVector(forward,  speed);
+    if (keys['KeyS']) flyDir.addScaledVector(forward, -speed);
+    if (keys['KeyA']) flyDir.addScaledVector(right,   -speed);
+    if (keys['KeyD']) flyDir.addScaledVector(right,    speed);
+    if (keys['KeyE']) flyDir.addScaledVector(up,       speed);
+    if (keys['KeyQ']) flyDir.addScaledVector(up,      -speed);
+
+    if (flyDir.lengthSq() > 0) {
+        camera.position.add(flyDir);
+        orbit.target.add(flyDir);
+    }
+}
+
+// F = focus model
+window.addEventListener('keydown', e => {
+    if (e.code === 'KeyF') focusModel();
+});
+
+// ─────────────────────────────────────────────
+// COORDINATE DISPLAY
+// ─────────────────────────────────────────────
+const elX = document.getElementById('cx');
+const elY = document.getElementById('cy');
+const elZ = document.getElementById('cz');
+
+function updateCoords() {
+    elX.textContent = camera.position.x.toFixed(2);
+    elY.textContent = camera.position.y.toFixed(2);
+    elZ.textContent = camera.position.z.toFixed(2);
+}
+
+// ─────────────────────────────────────────────
+// TELEPORT MODAL
+// ─────────────────────────────────────────────
+const overlay  = document.getElementById('modal-overlay');
+const inX = document.getElementById('tp-x');
+const inY = document.getElementById('tp-y');
+const inZ = document.getElementById('tp-z');
+
+document.getElementById('coords').addEventListener('click', () => {
+    inX.value = parseFloat(elX.textContent);
+    inY.value = parseFloat(elY.textContent);
+    inZ.value = parseFloat(elZ.textContent);
+    overlay.classList.add('active');
+    inX.focus(); inX.select();
+});
+document.getElementById('modal-cancel').addEventListener('click', () => overlay.classList.remove('active'));
+overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('active'); });
+
+document.getElementById('modal-go').addEventListener('click', doTeleport);
+[inX, inY, inZ].forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') doTeleport(); if (e.key === 'Escape') overlay.classList.remove('active'); }));
+
+function doTeleport() {
+    const x = parseFloat(inX.value) || 0;
+    const y = parseFloat(inY.value) || 0;
+    const z = parseFloat(inZ.value) || 0;
+    camera.position.set(x, y, z);
+    orbit.target.set(x, y - 10, z - 20);
+    orbit.update();
+    overlay.classList.remove('active');
+}
+
+// ─────────────────────────────────────────────
+// GRID & WIREFRAME TOGGLES
+// ─────────────────────────────────────────────
+let wireframe = false;
+document.getElementById('gridToggle').addEventListener('click', function() {
+    this.classList.toggle('on');
+    grid.visible = this.classList.contains('on');
+});
+document.getElementById('wireToggle').addEventListener('click', function() {
+    this.classList.toggle('on');
+    wireframe = this.classList.contains('on');
+    modelGroup.traverse(c => { if (c.isMesh) c.material.wireframe = wireframe; });
+});
+
+// ─────────────────────────────────────────────
+// FILE IMPORT
+// ─────────────────────────────────────────────
+document.getElementById('fileInput').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+        modelGroup.clear();
+        if (file.name.endsWith('.rbxmx')) parseRoblox(ev.target.result);
+        else if (file.name.endsWith('.tdw')) parseTDW(ev.target.result);
+        const status = document.getElementById('file-status');
+        status.textContent = `✓  ${file.name}  (${modelGroup.children.length} objects)`;
+        status.style.display = 'block';
+        // Apply wireframe to new objects
+        if (wireframe) modelGroup.traverse(c => { if (c.isMesh) c.material.wireframe = true; });
+        focusModel();
+    };
+    reader.readAsText(file);
+});
+
+// Drag & drop support
+const dropZone = document.getElementById('dropZone');
+document.body.addEventListener('dragover', e => e.preventDefault());
+document.body.addEventListener('drop', e => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+        modelGroup.clear();
+        if (file.name.endsWith('.rbxmx')) parseRoblox(ev.target.result);
+        else if (file.name.endsWith('.tdw')) parseTDW(ev.target.result);
+        const status = document.getElementById('file-status');
+        status.textContent = `✓  ${file.name}  (${modelGroup.children.length} objects)`;
+        status.style.display = 'block';
+        if (wireframe) modelGroup.traverse(c => { if (c.isMesh) c.material.wireframe = true; });
+        focusModel();
+    };
+    reader.readAsText(file);
+});
+
+// ─────────────────────────────────────────────
+// PARSERS
+// ─────────────────────────────────────────────
+function parseRoblox(data) {
+    const xml = new DOMParser().parseFromString(data, 'text/xml');
+    Array.from(xml.getElementsByTagName('Item')).forEach(item => {
+        if (!['Part','SpawnLocation','WedgePart'].includes(item.getAttribute('class'))) return;
+        const props = item.getElementsByTagName('Properties')[0];
+        const size  = props?.querySelector('Vector3[name="size"]');
+        const cf    = props?.querySelector('CoordinateFrame[name="CFrame"]');
+        if (!size || !cf) return;
+
+        const geo = new THREE.BoxGeometry(
+            parseFloat(size.querySelector('X').textContent),
+            parseFloat(size.querySelector('Y').textContent),
+            parseFloat(size.querySelector('Z').textContent)
+        );
+        const colorNode = props.querySelector('Color3uint8');
+        const color = colorNode ? (parseInt(colorNode.textContent) & 0xFFFFFF) : 0x88aacc;
+        const mat = new THREE.MeshStandardMaterial({ color, roughness: .6, metalness: .1 });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.castShadow = true; mesh.receiveShadow = true;
+
+        const m = [
+            parseFloat(cf.querySelector('R00').textContent), parseFloat(cf.querySelector('R10').textContent), parseFloat(cf.querySelector('R20').textContent), 0,
+            parseFloat(cf.querySelector('R01').textContent), parseFloat(cf.querySelector('R11').textContent), parseFloat(cf.querySelector('R21').textContent), 0,
+            parseFloat(cf.querySelector('R02').textContent), parseFloat(cf.querySelector('R12').textContent), parseFloat(cf.querySelector('R22').textContent), 0,
+            parseFloat(cf.querySelector('X').textContent),   parseFloat(cf.querySelector('Y').textContent),   parseFloat(cf.querySelector('Z').textContent),   1
+        ];
+        mesh.applyMatrix4(new THREE.Matrix4().fromArray(m));
+        modelGroup.add(mesh);
+    });
+}
+
+function parseTDW(data) {
+    try {
+        const world = JSON.parse(data);
+        world.objects.forEach(obj => {
+            const mesh = new THREE.Mesh(
+                new THREE.BoxGeometry(obj.s[0], obj.s[1], obj.s[2]),
+                new THREE.MeshStandardMaterial({ color: obj.c, roughness: .6, metalness: .1 })
+            );
+            mesh.position.set(obj.p[0], obj.p[1], obj.p[2]);
+            mesh.rotation.set(obj.r[0], obj.r[1], obj.r[2]);
+            mesh.castShadow = true; mesh.receiveShadow = true;
+            modelGroup.add(mesh);
         });
+    } catch(e) { console.error('Error parsing .tdw', e); }
+}
 
-        function parseRoblox(data) {
-            const xml = new DOMParser().parseFromString(data, "text/xml");
-            Array.from(xml.getElementsByTagName("Item")).forEach(item => {
-                if (["Part", "SpawnLocation", "WedgePart"].includes(item.getAttribute("class"))) {
-                    const props = item.getElementsByTagName("Properties")[0];
-                    const size = props.querySelector('Vector3[name="size"]');
-                    const cf = props.querySelector('CoordinateFrame[name="CFrame"]');
-                    if(!size || !cf) return;
-                    const mesh = new THREE.Mesh(
-                        new THREE.BoxGeometry(parseFloat(size.querySelector('X').textContent), parseFloat(size.querySelector('Y').textContent), parseFloat(size.querySelector('Z').textContent)),
-                        new THREE.MeshStandardMaterial({ color: (props.querySelector('Color3uint8')?.textContent & 0xFFFFFF) || 0xaaaaaa })
-                    );
-                    const m = [parseFloat(cf.querySelector('R00').textContent), parseFloat(cf.querySelector('R10').textContent), parseFloat(cf.querySelector('R20').textContent), 0,
-                              parseFloat(cf.querySelector('R01').textContent), parseFloat(cf.querySelector('R11').textContent), parseFloat(cf.querySelector('R21').textContent), 0,
-                              parseFloat(cf.querySelector('R02').textContent), parseFloat(cf.querySelector('R12').textContent), parseFloat(cf.querySelector('R22').textContent), 0,
-                              parseFloat(cf.querySelector('X').textContent), parseFloat(cf.querySelector('Y').textContent), parseFloat(cf.querySelector('Z').textContent), 1];
-                    mesh.applyMatrix4(new THREE.Matrix4().fromArray(m));
-                    modelGroup.add(mesh);
-                }
-            });
-        }
+// ─────────────────────────────────────────────
+// FOCUS
+// ─────────────────────────────────────────────
+function focusModel() {
+    if (modelGroup.children.length === 0) return;
+    const box = new THREE.Box3().setFromObject(modelGroup);
+    const center = box.getCenter(new THREE.Vector3());
+    const size   = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    orbit.target.copy(center);
+    camera.position.set(center.x + maxDim * 1.5, center.y + maxDim, center.z + maxDim * 1.5);
+    orbit.update();
+    euler.setFromQuaternion(camera.quaternion, 'YXZ');
+}
 
-        function parseTDW(data) {
-            try {
-                const world = JSON.parse(data);
-                world.objects.forEach(obj => {
-                    const mesh = new THREE.Mesh(new THREE.BoxGeometry(obj.s[0], obj.s[1], obj.s[2]), new THREE.MeshStandardMaterial({ color: obj.c }));
-                    mesh.position.set(obj.p[0], obj.p[1], obj.p[2]);
-                    mesh.rotation.set(obj.r[0], obj.r[1], obj.r[2]);
-                    modelGroup.add(mesh);
-                });
-            } catch(e) { console.error("Erreur parsing .tdw"); }
-        }
+// ─────────────────────────────────────────────
+// ANIMATE
+// ─────────────────────────────────────────────
+let last = performance.now();
+function animate() {
+    requestAnimationFrame(animate);
+    const now = performance.now();
+    const dt  = Math.min((now - last) / 1000, 0.05);
+    last = now;
 
-        function focusModel() {
-            const box = new THREE.Box3().setFromObject(modelGroup);
-            const center = box.getCenter(new THREE.Vector3());
-            const size = box.getSize(new THREE.Vector3());
-            const maxDim = Math.max(size.x, size.y, size.z);
-            controls.target.copy(center);
-            camera.position.set(center.x + maxDim, center.y + maxDim, center.z + maxDim);
-            controls.update();
-        }
+    updateFly(dt);
+    orbit.update();
+    updateCoords();
+    renderer.render(scene, camera);
+}
+animate();
 
-        function animate() {
-            requestAnimationFrame(animate);
-            controls.update();
-            renderer.render(scene, camera);
-        }
-        animate();
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-    </script>
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
 </body>
 </html>
